@@ -10,6 +10,7 @@
 	"dependencies": {
 		"@emotion/react": "^11.11.1",
 		"@emotion/styled": "^11.11.0",
+		"@google-cloud/bigquery": "^7.3.0",
 		"@mui/material": "^5.14.18",
 		"@mui/styled-engine-sc": "^6.0.0-alpha.6",
 		"@types/node": "18.18.9",
@@ -27,5 +28,8 @@
 		"typescript": "5.2.2",
 		"viem": "^1.13.1",
 		"wagmi": "^1.4.2"
+	},
+	"browser": {
+		"fs": false
 	}
 }
