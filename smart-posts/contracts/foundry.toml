@@ -12,3 +12,5 @@ sepolia = "${SEPOLIA_RPC_URL}"
 [etherscan]
 mumbai = { key = "${MUMBAI_ETHERSCAN_API_KEY}", url = "https://api-testnet.polygonscan.com/api" }
 sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.etherscan.io/api" }
+
+solc = "0.8.19"
