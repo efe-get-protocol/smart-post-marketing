@@ -11,6 +11,10 @@ import { FormControl, useFormControlContext } from '@mui/base/FormControl';
 import { Input, inputClasses } from '@mui/base/Input';
 import { styled } from '@mui/system';
 import { AiContext } from "@/context";
+import { LensClient, development, production, LensClientConfig } from "@lens-protocol/client";
+import { PushAPI, CONSTANTS } from "@pushprotocol/restapi";
+import { ethers } from "ethers";
+
 import clsx from 'clsx';
 type SubmitProps = {
 	description: string,
@@ -25,7 +29,6 @@ const ChipList = (interests: any) => {
 	const styles = {
 		
 		header: {
-
 			paddingTop:"20px",
 			paddingBottom:"10px"
 		},
@@ -89,34 +92,56 @@ export function Submit(props: SubmitProps) {
   cursor: "pointer",
   fontWeight: 'bold'
 		}
-
 	  }
 	  const fetchAIData = useCallback(async () => {
-		// if(openaiClient){
-		// 	console.log("here")
-		// console.log("desc", props.description)
-		// const res = await openaiClient.chat.completions.create({
-		// 	messages: [{ role: 'user', content: `you are going to read the paragraph below, which is a description of a company. Then, you will select the tags which are mentioned below that fits the description of the company. 
+				console.log("desc", props.description)
 
-		// 	the description of the company:
-		// 	${props.description}			
-		// 	the tags:
-		// 	Books & Literature, Art, Design, Photography, Fashion, Anime, Memes, Film & TV, Music, Creator Economy, Finance, Marketing, AI & ML, Science, Programming, Tools, Biotech, Exercise, Biohacking, Restaurants, Cooking, Cocktails, Beer, Wine, Arts & Crafts, Gaming, Travel, Collecting, Sports, Cars, News, Family & Parenting, Education, Career, Nature, Animals, Home Improvement, Gardening, Law, Government and Politics, Regulation, Crypto, NFT, DeFi, Web3, Web3 Social, Governance, DAOs, gm, Metaverse, Rekt, Ethereum, Bitcoin, L1s, L2s, Scaling, Lens, NSFW
+		if(openaiClient){
+			console.log("here")
+		console.log("desc", props.description)
+		const res = await openaiClient.chat.completions.create({
+			messages: [{ role: 'user', content: `you are going to read the paragraph below, which is a description of a company. Then, you will select the tags which are mentioned below that fits the description of the company. 
+
+			the description of the company:
+			${props.description}			
+			the tags:
+			Books & Literature, Art, Design, Photography, Fashion, Anime, Memes, Film & TV, Music, Creator Economy, Finance, Marketing, AI & ML, Science, Programming, Tools, Biotech, Exercise, Biohacking, Restaurants, Cooking, Cocktails, Beer, Wine, Arts & Crafts, Gaming, Travel, Collecting, Sports, Cars, News, Family & Parenting, Education, Career, Nature, Animals, Home Improvement, Gardening, Law, Government and Politics, Regulation, Crypto, NFT, DeFi, Web3, Web3 Social, Governance, DAOs, gm, Metaverse, Rekt, Ethereum, Bitcoin, L1s, L2s, Scaling, Lens, NSFW
 			
-		// 	the format to print out the result is the same as the format of the tags. do not add any other words to the answer. print just the tags split by a comma.` }],
-		// 	model: 'gpt-4',
-		//   })
-		//   console.log(res)
-		//   const interests = res.choices[0].message.content?.split(', ');
-		//   props.setInterests(interests);
-			
-		// }
-		console.log("hereee")
-		const res = await fetch('/api/bigquery', {
-    method: 'GET',
-  });
-  console.log(res)
-		console.log("not here")
+			the format to print out the result is the same as the format of the tags. do not add any other words to the answer. print just the tags split by a comma.` }],
+			model: 'gpt-4',
+		  })
+		  console.log(res)
+		  const interests = res.choices[0].message.content?.split(', ');
+		  props.setInterests(interests);
+		  
+			const lensClient = new LensClient({
+			  environment: production,
+			  url: "https://api-v2.lens.dev"
+
+			} as LensClientConfig);
+		  
+		  const profiles = await lensClient.profile.fetchAll({
+			where: { profileIds: ["0x01ed8b", "0x10", "0x3a", "0x40", "0x62"] },
+		  });
+		  const allProfiles = profiles.items[0];
+		  console.log(allProfiles);
+		  const res2 = await openaiClient.chat.completions.create({
+			messages: [{ role: 'user', content: `${res.choices[0].message.content} are a list of interests that a company's customers have. Please write a single sentence for a notification to be sent to the customers. The description of the company is ${props.description}. Use the name of the company in the notification as well.` }],
+			model: 'gpt-4',
+		  });
+		  const notificationContent = res2.choices[0].message.content;
+		  const signer = new ethers.Wallet(process.env.NEXT_PUBLIC_PRIV!)
+
+// Initialize wallet user
+// 'CONSTANTS.ENV.PROD' -> mainnet apps | 'CONSTANTS.ENV.STAGING' -> testnet apps
+		const user = await PushAPI.initialize(signer, { env: CONSTANTS.ENV.STAGING });
+		const response = await user.channel.send(["*"], {
+			notification: {
+			  title: "Notification",
+			  body: notificationContent!,
+			},
+		  });
+		}
 		}, []);
 	  return (
 		<div className="description-form">
@@ -126,7 +151,8 @@ export function Submit(props: SubmitProps) {
 			  style={styles.newButton}
 			  disabled={false}
 			  onClick={fetchAIData}
-			>
+			>	
+			
 			  {"Submit"}
 			</Button>
 		  </div>
@@ -147,7 +173,7 @@ export default function Home() {
 	};
 
 
-	const [interests, setInterests] = useState(["Cryptography","Cryptography","Cryptography","Cryptography","Cryptography","Cryptography","Cryptography","Cryptography"]);
+	const [interests, setInterests] = useState([]);
 	return (
 		<>
 			<Head>
@@ -213,6 +239,7 @@ export default function Home() {
 						<div className={styles.content}>
 						<BasicFormControl setInterests={setInterests}></BasicFormControl>
 						{ interests.length > 0 ? <ChipList interests={interests}></ChipList> : <div/>}
+
 						</div>
 
 					</div>
@@ -306,7 +333,6 @@ function BasicFormControl(props: BasicFormControlProps) {
                 }}
             />
 			<Submit description={formData.description} setInterests={props.setInterests}></Submit>
-          {/* <CreatePeerReview feedback={formData.feedback} documentUrl={formData.documentUrl} rating={formData.rating} researchId={formData.researchId}/> */}
         </form>
 		</div>
   );
